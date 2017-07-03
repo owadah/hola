@@ -23,13 +23,19 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 
 import org.apache.deltaspike.core.api.config.ConfigResolver;
+import org.jboss.jbossts.star.util.TxStatus;
+import org.jboss.jbossts.star.util.TxSupport;
 import org.keycloak.KeycloakPrincipal;
 import org.keycloak.KeycloakSecurityContext;
 
@@ -37,6 +43,7 @@ import io.swagger.annotations.ApiOperation;
 
 @Path("/")
 public class HolaResource {
+    private String txCoordinatorUrl = "http://localhost:8080/rest-at-coordinator/tx/transaction-manager";
 
     @Inject
     private AlohaService alohaService;
@@ -74,6 +81,55 @@ public class HolaResource {
         greetings.addAll(alohaService.aloha());
         return greetings;
     }
+
+    @GET
+    @Path("/hola-chaining-tx")
+    @Produces("application/json")
+    @ApiOperation("Returns the greeting plus the next service in the chain")
+    public List<String> holaChainingTx() {
+        TxSupport txSupport = new TxSupport(txCoordinatorUrl);
+
+        txSupport.startTx();
+        String header = txSupport.makeTwoPhaseUnAwareParticipantLinkHeader("http://localhost:8180", false, null, null, false);
+        String participant = new TxSupport().enlistParticipant("http://localhost:8180", header);
+
+        List<String> greetings = new ArrayList<>();
+        greetings.add(hola());
+        greetings.addAll(alohaService.aloha());
+
+        txSupport.commitTx();
+        return greetings;
+    }
+
+    @PUT
+    @Path("{pId}/{tId}/prepare")
+    public Response prepare(@PathParam("pId") @DefaultValue("")String pId, @PathParam("tId") @DefaultValue("")String tId, String content) {
+        System.out.println("Prepare called with pid: " + pId + ", tId: " + tId + ", content: " + content);
+        return Response.ok(TxSupport.toStatusContent(TxStatus.TransactionPrepared.name())).build();
+    }
+
+    @PUT
+    @Path("{pId}/{tId}/commit")
+    public Response commit(@PathParam("pId") @DefaultValue("")String pId, @PathParam("tId") @DefaultValue("")String tId, String content) {
+        System.out.println("Commit called with pid: " + pId + ", tId: " + tId + ", content: " + content);
+        return Response.ok(TxSupport.toStatusContent(TxStatus.TransactionCommitted.name())).build();
+    }
+
+    @PUT
+    @Path("{pId}/{tId}/rollback")
+    public Response rollback(@PathParam("pId") @DefaultValue("")String pId, @PathParam("tId") @DefaultValue("")String tId, String content) {
+        System.out.println("Rollback called with pid: " + pId + ", tId: " + tId + ", content: " + content);
+        return Response.ok(TxSupport.toStatusContent(TxStatus.TransactionRolledBack.name())).build();
+    }
+
+    @PUT
+    @Path("{pId}/{tId}/commit-one-phase")
+    public Response commmitOnePhase(@PathParam("pId") @DefaultValue("")String pId, @PathParam("tId") @DefaultValue("")String tId, String content) {
+        System.out.println("One phase commit called with pid: " + pId + ", tId: " + tId + ", content: " + content);
+        return Response.ok(TxSupport.toStatusContent(TxStatus.TransactionCommittedOnePhase.name())).build();
+    }
+
+
 
     @GET
     @Path("/hola-secured")
