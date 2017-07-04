@@ -16,6 +16,7 @@
  */
 package com.redhat.developers.msa.hola;
 
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -23,21 +24,27 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.HEAD;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
+import javax.ws.rs.core.UriInfo;
 
 import org.apache.deltaspike.core.api.config.ConfigResolver;
 import org.jboss.jbossts.star.util.TxStatus;
 import org.jboss.jbossts.star.util.TxSupport;
 import org.keycloak.KeycloakPrincipal;
 import org.keycloak.KeycloakSecurityContext;
+
+import com.sun.corba.se.spi.orbutil.threadpool.Work;
 
 import io.swagger.annotations.ApiOperation;
 
@@ -90,8 +97,8 @@ public class HolaResource {
         TxSupport txSupport = new TxSupport(txCoordinatorUrl);
 
         txSupport.startTx();
-        String header = txSupport.makeTwoPhaseUnAwareParticipantLinkHeader("http://localhost:8180", false, null, null, false);
-        String participant = new TxSupport().enlistParticipant("http://localhost:8180", header);
+        String header = txSupport.makeTwoPhaseUnAwareParticipantLinkHeader("http://localhost:8180/api", false, null, null, false);
+        String participant = new TxSupport().enlistParticipant(txSupport.getDurableParticipantEnlistmentURI(), header);
 
         List<String> greetings = new ArrayList<>();
         greetings.add(hola());
@@ -102,34 +109,56 @@ public class HolaResource {
     }
 
     @PUT
-    @Path("{pId}/{tId}/prepare")
+    @Path("{pId:[^/]*}{p1:/?}{tId:[^/]*}{p2:/?}prepare")
     public Response prepare(@PathParam("pId") @DefaultValue("")String pId, @PathParam("tId") @DefaultValue("")String tId, String content) {
         System.out.println("Prepare called with pid: " + pId + ", tId: " + tId + ", content: " + content);
         return Response.ok(TxSupport.toStatusContent(TxStatus.TransactionPrepared.name())).build();
     }
 
     @PUT
-    @Path("{pId}/{tId}/commit")
+    @Path("{pId:[^/]*}{p1:/?}{tId:[^/]*}{p2:/?}commit")
     public Response commit(@PathParam("pId") @DefaultValue("")String pId, @PathParam("tId") @DefaultValue("")String tId, String content) {
         System.out.println("Commit called with pid: " + pId + ", tId: " + tId + ", content: " + content);
         return Response.ok(TxSupport.toStatusContent(TxStatus.TransactionCommitted.name())).build();
     }
 
     @PUT
-    @Path("{pId}/{tId}/rollback")
+    @Path("{pId:[^/]*}{p1:/?}{tId:[^/]*}{p2:/?}rollback")
     public Response rollback(@PathParam("pId") @DefaultValue("")String pId, @PathParam("tId") @DefaultValue("")String tId, String content) {
         System.out.println("Rollback called with pid: " + pId + ", tId: " + tId + ", content: " + content);
         return Response.ok(TxSupport.toStatusContent(TxStatus.TransactionRolledBack.name())).build();
     }
 
     @PUT
-    @Path("{pId}/{tId}/commit-one-phase")
+    @Path("{pId:[^/]*}{p1:/?}{tId:[^/]*}{p2:/?}commit-one-phase")
     public Response commmitOnePhase(@PathParam("pId") @DefaultValue("")String pId, @PathParam("tId") @DefaultValue("")String tId, String content) {
         System.out.println("One phase commit called with pid: " + pId + ", tId: " + tId + ", content: " + content);
         return Response.ok(TxSupport.toStatusContent(TxStatus.TransactionCommittedOnePhase.name())).build();
     }
 
+    @HEAD
+    @Path("{pId:[^/]*}{p1:/?}{tId:[^/]*}{p2:/?}participant")
+    public Response getTerminator(@Context UriInfo info, @PathParam("pId") @DefaultValue("")String pId, @PathParam("tId") @DefaultValue("")String tId) {
+        System.out.println("System participant getTerminator called with pid: " + pId + ", tId: " + tId);
+        Response.ResponseBuilder builder = Response.ok();
+        builder.header("Link", new TxSupport().makeTwoPhaseUnAwareParticipantLinkHeader("http://localhost:8180/api", false, null, null, false));
+        return builder.build();
+    }
 
+    @GET
+    @Path("{pId:[^/]*}{p1:/?}{tId:[^/]*}{p2:/?}participant")
+    public String getStatus(@PathParam("pId") @DefaultValue("")String pId, @PathParam("tId") @DefaultValue("")String tId) {
+        System.out.println("System get status called with pid: " + pId + ", tId: " + tId);
+        return TxSupport.toStatusContent(TxStatus.TransactionActive.name());
+
+    }
+
+    @SuppressWarnings({"UnusedDeclaration"})
+    @DELETE
+    @Path("{pId:[^/]*}{p1:/?}{tId:[^/]*}{p2:/?}participant")
+    public void forgetWork(@PathParam("pId") String pId, @PathParam("tId") String tId) {
+        System.out.println("Delete with pid: " + pId + ", tId: " + tId);
+    }
 
     @GET
     @Path("/hola-secured")
