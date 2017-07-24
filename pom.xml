@@ -181,6 +181,13 @@
 			<version>2.1.4</version>
 		</dependency>
 
+        <!-- Narayana REST AT -->
+        <dependency>
+	      <groupId>org.jboss.narayana.rts</groupId>
+	      <artifactId>restat-util</artifactId>
+	      <version>5.3.3.Final</version>
+        </dependency>
+
 	</dependencies>
 
 	<build>

@@ -16,13 +16,14 @@
  */
 package com.redhat.developers.msa.hola;
 
+import feign.Param;
 import feign.RequestLine;
 
 import java.util.List;
 
 public interface AlohaService {
 
-	@RequestLine("GET /api/aloha-chaining")
-	public List<String> aloha();
+	@RequestLine("GET /api/aloha-chaining?txnUid={txnContext}")
+	public List<String> aloha(@Param("txnContext") String txnContext);
 
 }

@@ -16,20 +16,33 @@
  */
 package com.redhat.developers.msa.hola;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.HEAD;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
+import javax.ws.rs.core.UriInfo;
 
 import org.apache.deltaspike.core.api.config.ConfigResolver;
+import org.jboss.jbossts.star.util.TxStatus;
+import org.jboss.jbossts.star.util.TxSupport;
 import org.keycloak.KeycloakPrincipal;
 import org.keycloak.KeycloakSecurityContext;
 
@@ -37,6 +50,10 @@ import io.swagger.annotations.ApiOperation;
 
 @Path("/")
 public class HolaResource {
+
+    private static final String txCoordinator = "http://wildfly-rts:8080";
+    private static final String txCoordinatorUrl = txCoordinator + "/rest-at-coordinator/tx/transaction-manager";
+
 
     @Inject
     private AlohaService alohaService;
@@ -69,9 +86,23 @@ public class HolaResource {
     @Produces("application/json")
     @ApiOperation("Returns the greeting plus the next service in the chain")
     public List<String> holaChaining() {
+        TxSupport txSupport = new TxSupport(txCoordinatorUrl);
+
+        txSupport.startTx();
+
+        String participantUid = Integer.toString(new Random().nextInt(Integer.MAX_VALUE) + 1);
+        String header = txSupport.makeTwoPhaseUnAwareParticipantLinkHeader(txCoordinator + "/api", /*volatile*/ false, participantUid, null, false);
+        System.out.println("Header :" + header);
+        String enlistmentUri = txSupport.getDurableParticipantEnlistmentURI();
+        System.out.println("Enlistment url: " + enlistmentUri);
+        String participant1 = new TxSupport().enlistParticipant(enlistmentUri, header);
+
         List<String> greetings = new ArrayList<>();
         greetings.add(hola());
-        greetings.addAll(alohaService.aloha());
+        greetings.addAll(alohaService.aloha(enlistmentUri));
+
+        txSupport.commitTx();
+
         return greetings;
     }
 
@@ -109,5 +140,96 @@ public class HolaResource {
     @ApiOperation("Used to verify the health of the service")
     public String health() {
         return "I'm ok";
+    }
+
+
+    // -------- TXN handling
+    @PUT
+    @Path("/{pUid}/prepare")
+    public Response prepare(@PathParam("pUid") String pUid, String content) {
+        System.out.println("Prepare called with pUid: " + pUid + ", content: " + content);
+        return Response.ok(TxSupport.toStatusContent(TxStatus.TransactionPrepared.name())).build();
+    }
+
+    @PUT
+    @Path("/{pUid}/commit")
+    public Response commit(@PathParam("pUid") String pUid, String content) {
+        System.out.println("Commit called with pid: " + pUid + ", content: " + content);
+        return Response.ok(TxSupport.toStatusContent(TxStatus.TransactionCommitted.name())).build();
+    }
+
+    @PUT
+    @Path("/{pUid}/rollback")
+    public Response rollback(@PathParam("pUid") String pUid, String content) {
+        System.out.println("Rollback called with pid: " + pUid + ", content: " + content);
+        return Response.ok(TxSupport.toStatusContent(TxStatus.TransactionRolledBack.name())).build();
+    }
+
+    @PUT
+    @Path("/{pUid}/commit-one-phase")
+    public Response commmitOnePhase(@PathParam("pUid") String pUid, String content) {
+        System.out.println("One phase commit called with pid: " + pUid + ", content: " + content);
+        return Response.ok(TxSupport.toStatusContent(TxStatus.TransactionCommittedOnePhase.name())).build();
+    }
+
+    @HEAD
+    @Path("/{pUid}/participant")
+    public Response getTerminator(@Context UriInfo info, @PathParam("pUid") String pUid) {
+        System.out.println("System participant getTerminator called with pid: " + pUid);
+        Response.ResponseBuilder builder = Response.ok();
+        builder.header("Link", new TxSupport().makeTwoPhaseUnAwareParticipantLinkHeader(txCoordinator + "/api", /*volatile*/ false, null, null, false));
+        return builder.build();
+    }
+
+    @GET
+    @Path("/{pUid}/participant")
+    public String getStatus(@PathParam("pUid") String pUid) {
+        System.out.println("System get status called with pid: " + pUid);
+        return TxSupport.toStatusContent(TxStatus.TransactionActive.name());
+
+    }
+
+    @SuppressWarnings({"UnusedDeclaration"})
+    @DELETE
+    @Path("/{pUid}/participant")
+    public void forgetWork(@PathParam("pUid") String pUid) {
+        System.out.println("Delete with pUid: " + pUid);
+    }
+
+    // --- Debugging purposes
+    private void sendGet(String url) {
+        // sendGet("http://aloha:8080/api/aloha");
+        // sendGet(txCoordinator);
+        // sendGet(txCoordinatorUrl);
+        try {
+            URL obj = new URL(url);
+            HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+
+            // optional default is GET
+            con.setRequestMethod("GET");
+
+            //add request header
+            con.setRequestProperty("User-Agent", "Mozilla/5.0");
+
+            int responseCode = con.getResponseCode();
+            System.out.println("\nSending 'GET' request to URL : " + url);
+            System.out.println("Response Code : " + responseCode);
+
+            BufferedReader in = new BufferedReader(
+                    new InputStreamReader(con.getInputStream()));
+            String inputLine;
+            StringBuffer response = new StringBuffer();
+
+            while ((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
+            }
+            in.close();
+
+            //print result
+            System.out.println(response.toString());
+        } catch (Exception e) {
+            System.err.println("Error ouch! " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
