@@ -29,6 +29,7 @@ import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.HEAD;
 import javax.ws.rs.PUT;
@@ -51,7 +52,7 @@ import io.swagger.annotations.ApiOperation;
 @Path("/")
 public class HolaResource {
 
-    private static final String txCoordinator = "http://wildfly-rts:8080";
+    private static final String txCoordinator = "http://localhost:8080";
     private static final String txCoordinatorUrl = txCoordinator + "/rest-at-coordinator/tx/transaction-manager";
 
 
@@ -91,17 +92,19 @@ public class HolaResource {
         txSupport.startTx();
 
         String participantUid = Integer.toString(new Random().nextInt(Integer.MAX_VALUE) + 1);
-        String header = txSupport.makeTwoPhaseUnAwareParticipantLinkHeader(txCoordinator + "/api", /*volatile*/ false, participantUid, null, false);
+        String header = txSupport.makeTwoPhaseUnAwareParticipantLinkHeader("http://hola:8080/api", /*volatile*/ false, participantUid, null, false);
         System.out.println("Header :" + header);
         String enlistmentUri = txSupport.getDurableParticipantEnlistmentURI();
         System.out.println("Enlistment url: " + enlistmentUri);
-        String participant1 = new TxSupport().enlistParticipant(enlistmentUri, header);
+        String participant = new TxSupport().enlistParticipant(enlistmentUri, header);
+        System.out.println("Enlisted participant url: " + participant);
 
         List<String> greetings = new ArrayList<>();
         greetings.add(hola());
         greetings.addAll(alohaService.aloha(enlistmentUri));
 
-        txSupport.commitTx();
+        String committed = txSupport.commitTx();
+        System.out.println("committed string: " + committed);
 
         return greetings;
     }
