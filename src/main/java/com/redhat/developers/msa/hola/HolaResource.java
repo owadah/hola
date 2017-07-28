@@ -52,7 +52,7 @@ import io.swagger.annotations.ApiOperation;
 @Path("/")
 public class HolaResource {
 
-    private static final String txCoordinator = "http://localhost:8080";
+    private static final String txCoordinator = "http://wildfly-rts:8080";
     private static final String txCoordinatorUrl = txCoordinator + "/rest-at-coordinator/tx/transaction-manager";
 
 
@@ -92,7 +92,7 @@ public class HolaResource {
         txSupport.startTx();
 
         String participantUid = Integer.toString(new Random().nextInt(Integer.MAX_VALUE) + 1);
-        String header = txSupport.makeTwoPhaseUnAwareParticipantLinkHeader("http://hola:8080/api", /*volatile*/ false, participantUid, null, false);
+        String header = txSupport.makeTwoPhaseUnAwareParticipantLinkHeader("http://hola:8080/api", /*volatile*/ false, participantUid, null, true);
         System.out.println("Header :" + header);
         String enlistmentUri = txSupport.getDurableParticipantEnlistmentURI();
         System.out.println("Enlistment url: " + enlistmentUri);
