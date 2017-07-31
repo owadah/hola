@@ -99,7 +99,7 @@ public class TracingConfiguration {
                 .logger(new Logger.ErrorLogger()).logLevel(Logger.Level.BASIC)
                 .decoder(new JacksonDecoder())
                 .target(AlohaService.class,"http://aloha:8080/",
-                        (String txnContext) -> Collections.singletonList("Aloha response (fallback)"));
+                        (String tmEnlistUri) -> Collections.singletonList("Aloha response (fallback)"));
     }
 
     @WebListener

@@ -29,13 +29,13 @@ import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.HEAD;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
@@ -53,8 +53,8 @@ import io.swagger.annotations.ApiOperation;
 public class HolaResource {
 
     private static final String txCoordinator = "http://wildfly-rts:8080";
+    // private static final String txCoordinator = "http://localhost:8180";
     private static final String txCoordinatorUrl = txCoordinator + "/rest-at-coordinator/tx/transaction-manager";
-
 
     @Inject
     private AlohaService alohaService;
@@ -86,26 +86,45 @@ public class HolaResource {
     @Path("/hola-chaining")
     @Produces("application/json")
     @ApiOperation("Returns the greeting plus the next service in the chain")
-    public List<String> holaChaining() {
-        TxSupport txSupport = new TxSupport(txCoordinatorUrl);
-
-        txSupport.startTx();
-
+    public List<String> holaChaining(@QueryParam("tmEnlistUri") String tmEnlistUri) {
         String participantUid = Integer.toString(new Random().nextInt(Integer.MAX_VALUE) + 1);
-        String header = txSupport.makeTwoPhaseUnAwareParticipantLinkHeader("http://hola:8080/api", /*volatile*/ false, participantUid, null, true);
-        System.out.println("Header :" + header);
-        String enlistmentUri = txSupport.getDurableParticipantEnlistmentURI();
-        System.out.println("Enlistment url: " + enlistmentUri);
-        String participant = new TxSupport().enlistParticipant(enlistmentUri, header);
+        String header = new TxSupport().makeTwoPhaseUnAwareParticipantLinkHeader("http://hola:8080/api", /*volatile*/ false, participantUid, null, true);
+        System.out.println("enlistment uri: " + tmEnlistUri + ", header :" + header);
+        String participant = new TxSupport().enlistParticipant(tmEnlistUri, header);
         System.out.println("Enlisted participant url: " + participant);
 
         List<String> greetings = new ArrayList<>();
         greetings.add(hola());
-        greetings.addAll(alohaService.aloha(enlistmentUri));
+        greetings.addAll(alohaService.aloha(tmEnlistUri));
 
+        return greetings;
+    }
+
+    @GET
+    @Path("/hola-starttxn")
+    @Produces("application/json")
+    @ApiOperation("Returns the greeting plus the next service in the chain")
+    public List<String> holaStartTxn() {
+        TxSupport txSupport = new TxSupport(txCoordinatorUrl);
+        
+        txSupport.startTx();
+        
+        String participantUid = Integer.toString(new Random().nextInt(Integer.MAX_VALUE) + 1);
+        String header = txSupport.makeTwoPhaseUnAwareParticipantLinkHeader("http://hola:8080/api", /*volatile*/ false, participantUid, null, true);
+        System.out.println("Header :" + header);
+        // String enlistmentUri = txSupport.getDurableParticipantEnlistmentURI();
+        String enlistmentUri = txSupport.getTxnUri();
+        System.out.println("Enlistment url: " + enlistmentUri);
+        String participant = new TxSupport().enlistParticipant(enlistmentUri, header);
+        System.out.println("Enlisted participant url: " + participant);
+        
+        List<String> greetings = new ArrayList<>();
+        greetings.add(hola());
+        greetings.addAll(alohaService.aloha(enlistmentUri));
+        
         String committed = txSupport.commitTx();
         System.out.println("committed string: " + committed);
-
+        
         return greetings;
     }
 

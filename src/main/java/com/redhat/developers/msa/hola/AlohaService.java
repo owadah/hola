@@ -23,7 +23,7 @@ import java.util.List;
 
 public interface AlohaService {
 
-	@RequestLine("GET /api/aloha-chaining?txnUid={txnContext}")
-	public List<String> aloha(@Param("txnContext") String txnContext);
+	@RequestLine("GET /api/aloha-chaining?tmEnlistUri={tmEnlistUri}")
+	public List<String> aloha(@Param("tmEnlistUri") String tmEnlistUri);
 
 }
