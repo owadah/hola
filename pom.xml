@@ -181,6 +181,13 @@
 			<version>2.1.4</version>
 		</dependency>
 
+                <!-- Narayana -->
+                <dependency>
+                    <groupId>org.jboss.narayana.rts</groupId>
+                    <artifactId>lra-filters</artifactId>
+                    <version>5.6.0.Final-SNAPSHOT</version>
+                </dependency>
+
 	</dependencies>
 
 	<build>
