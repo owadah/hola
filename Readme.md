@@ -22,3 +22,10 @@ Deploy the application in Openshift
 2. Execute
 
 		mvn clean package docker:build fabric8:json fabric8:apply
+
+
+mvn clean package && ./fix-dependencies.sh && java -jar target/hola-swarm.jar -Dswarm.http.port=8181 -Dswarm.logging=DEBUG
+
+To debug:
+java -agentlib:jdwp=transport=dt_socket,address=8787,server=y,suspend=n -jar target/hola-swarm.jar -Dswarm.http.port=8181
+
