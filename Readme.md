@@ -21,4 +21,36 @@ Deploy the application in Openshift
 1. Make sure to be connected to the Openshift cluster
 2. Execute
 
-		mvn package fabric8:deploy
+	mvn package fabric8:deploy
+
+Running with LRA
+----------------
+
+One liner to compile and run
+
+    mvn clean package && java -jar target/hola-swarm.jar -Dswarm.http.port=8282 -Dlra.http.port=8180 -Daloha.host=localhost -Daloha.port=8383
+
+For testing purposes a `curl` command
+
+    curl -i -X GET http://localhost:8282/api/hola-chaining/
+
+Handy parameters of the LRA
+
+- change the host where lra coordinator resides
+    -Dlra.http.host=localhost
+- change the port to say where lra coordinator resides
+    -Dlra.http.port=8080
+- change what swarm is logging
+    -Dswarm.logging=TRACE
+- port of undertow is sitting at
+    -Dswarm.http.port=8181
+- port offset for the swarm instance
+    -Dswarm.port.offset=100
+- what interface the swarm bind to (0.0.0.0 is default)
+    -Dswarm.bind.address
+- debugging
+    -agentlib:jdwp=transport=dt_socket,address=8787,server=y,suspend=n
+  used as
+    java -agentlib:jdwp=transport=dt_socket,address=8787,server=y,suspend=n -jar target/hola-swarm.jar
+
+

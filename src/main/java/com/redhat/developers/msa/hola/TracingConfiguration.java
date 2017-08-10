@@ -91,6 +91,10 @@ public class TracingConfiguration {
         // bind current span to Hystrix thread
         TracingConcurrencyStrategy.register();
 
+        String host = System.getProperty("aloha.host", "aloha");
+        String port = System.getProperty("aloha.port", "8080");
+        System.out.println(">>> Aloha service expected being at " + host + ":" + port);
+
         return HystrixFeign.builder()
                 // Use apache HttpClient which contains the ZipKin Interceptors
                 .client(new TracingClient(new ApacheHttpClient(HttpClientBuilder.create().build()), tracer))
@@ -98,8 +102,8 @@ public class TracingConfiguration {
                 // Bind Zipkin Server Span to Feign Thread
                 .logger(new Logger.ErrorLogger()).logLevel(Logger.Level.BASIC)
                 .decoder(new JacksonDecoder())
-                .target(AlohaService.class,"http://aloha:8080/",
-                        () -> Collections.singletonList("Aloha response (fallback)"));
+                .target(AlohaService.class, String.format("http://%s:%s/", host, port),
+                        (String lraUri) -> Collections.singletonList("Aloha response (fallback)"));
     }
 
     @WebListener

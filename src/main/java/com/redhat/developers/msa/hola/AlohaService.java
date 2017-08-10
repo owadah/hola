@@ -16,13 +16,17 @@
  */
 package com.redhat.developers.msa.hola;
 
+import feign.Headers;
+import feign.Param;
 import feign.RequestLine;
+import io.narayana.lra.client.LRAClient;
 
 import java.util.List;
 
 public interface AlohaService {
 
-	@RequestLine("GET /api/aloha-chaining")
-	public List<String> aloha();
+    @RequestLine("GET /api/aloha-chaining")
+    @Headers(LRAClient.LRA_HTTP_HEADER + ": {xlra}")
+	public List<String> aloha(@Param("xlra") String xlra);
 
 }

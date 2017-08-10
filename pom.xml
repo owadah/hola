@@ -43,10 +43,12 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
 		<!-- JBoss dependency versions -->
-		<version.wildfly.swarm>2017.2.0</version.wildfly.swarm>
+		<version.wildfly.swarm>2017.8.1</version.wildfly.swarm>
 
 		<!-- DeltaSpike - Used for configuration -->
 		<deltaspike.version>1.6.1</deltaspike.version>
+
+		<version.narayana>5.7.1.Final</version.narayana>
 
 		<!-- other plugin versions -->
 		<version.compiler.plugin>3.1</version.compiler.plugin>
@@ -183,6 +185,24 @@
 			<groupId>org.webjars</groupId>
 			<artifactId>swagger-ui</artifactId>
 			<version>2.1.4</version>
+		</dependency>
+
+		<!-- Narayana -->
+		<dependency>
+			<groupId>org.jboss.narayana.rts</groupId>
+			<artifactId>lra-filters</artifactId>
+			<version>${version.narayana}</version>
+		</dependency>
+		<!--<dependency>
+			<groupId>org.jboss.narayana.rts</groupId>
+			<artifactId>lra-cdi-rest</artifactId>
+			<version>${version.narayana}</version>
+		</dependency>-->
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-cdi</artifactId>
+			<version>3.0.19.Final</version>
+                        <scope>provided</scope>
 		</dependency>
 
 	</dependencies>
