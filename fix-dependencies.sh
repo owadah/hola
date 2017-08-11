@@ -1,16 +1,25 @@
 #!/bin/bash
 
+DIR="target/hola-swarm.jar.dir"
+YAML="$DIR/META-INF/wildfly-swarm-manifest.yaml"
+
+function writeto() {
+  echo "$1" >> $YAML
+}
+
 set -x -e
-rm -rf target/hola-swarm.jar.dir
-unzip -q -d target/hola-swarm.jar.dir target/hola-swarm.jar
-VERSION=`find target/hola-swarm.jar.dir -name 'httpclient*jar' | head -n 1 | sed 's|.*-\(.*\)\.jar$|\1|'`
+rm -rf "$DIR"
+unzip -q -d "$DIR" target/hola-swarm.jar
+VERSION_CLIENT=`find target/hola-swarm.jar.dir -name 'httpclient*jar' | head -n 1 | sed 's|.*-\(.*\)\.jar$|\1|'`
+VERSION_CORE=`find target/hola-swarm.jar.dir -name 'httpcore*jar' | head -n 1 | sed 's|.*-\(.*\)\.jar$|\1|'`
 
 if [ "x$1" = "xnew" ]; then
-  TOADD="org.apache.httpcomponents:httpclient:jar:${VERSION}: null"
+  writeto "  org.apache.httpcomponents:httpclient:jar:${VERSION_CLIENT}: null"
+  writeto "  org.apache.httpcomponents:httpcore:jar:${VERSION_CORE}: null"
 else
-  TOADD="- org.apache.httpcomponents:httpclient:jar:${VERSION}"
+  writeto "- org.apache.httpcomponents:httpclient:jar:${VERSION_CLIENT}"
 fi
-echo "$TOADD" >> target/hola-swarm.jar.dir/META-INF/wildfly-swarm-manifest.yaml
+sed -i '/org.jboss.resteasy:/d' "$YAML"
 
 [ ! -f hola-swarm.jar.origin ] && mv target/hola-swarm.jar target/hola-swarm.jar.origin
 
