@@ -28,7 +28,7 @@ mvn clean package && ./fix-dependencies.sh && java -jar target/hola-swarm.jar -D
 java -jar target/hola-swarm.jar -Dswarm.logging=TRACE -Dswarm.http.port=8181 -Dlra.http.port=8180
 
 To debug:
-java -agentlib:jdwp=transport=dt_socket,address=8787,server=y,suspend=n -jar target/hola-swarm.jar -Dswarm.http.port=8181
+java -agentlib:jdwp=transport=dt_socket,address=8787,server=y,suspend=n -jar target/hola-swarm.jar -Dswarm.http.port=8181 -Dlra.http.port=8180
 
 -Dlra.http.host=localhost  ...changes the host where lra coordinator resides
 -Dlra.http.port=8080  ...changes the port to say where lra coordinator resides
@@ -39,3 +39,4 @@ java -agentlib:jdwp=transport=dt_socket,address=8787,server=y,suspend=n -jar tar
 
 
 
+mvn clean install && java  -jar target/hola-swarm.jar -Dswarm.http.port=8282 -Dlra.http.port=8180

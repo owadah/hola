@@ -27,7 +27,6 @@ import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -42,7 +41,6 @@ import org.jboss.narayana.rts.lra.annotation.Compensate;
 import org.jboss.narayana.rts.lra.annotation.CompensatorStatus;
 import org.jboss.narayana.rts.lra.annotation.Complete;
 import org.jboss.narayana.rts.lra.annotation.LRA;
-import org.jboss.narayana.rts.lra.annotation.Leave;
 import org.jboss.narayana.rts.lra.annotation.Status;
 import org.jboss.narayana.rts.lra.client.LRAClient;
 import org.keycloak.KeycloakPrincipal;
@@ -52,8 +50,6 @@ import io.swagger.annotations.ApiOperation;
 
 @Path("/")
 public class HolaResource {
-    public static final String LRA_HTTP_HEADER = "X-lra";
-
     @Inject
     private AlohaService alohaService;
 
@@ -133,14 +129,15 @@ public class HolaResource {
     }
 
 
+    // === Hola LRA handling ===
+    // ============================================================
     @POST
     @Path("/complete")
     @Produces(MediaType.APPLICATION_JSON)
     @Complete
-    public Response completeWork(@HeaderParam(LRA_HTTP_HEADER) String lraId) throws NotFoundException {
+    public Response completeWork(@HeaderParam(LRAClient.LRA_HTTP_HEADER) String lraId) throws NotFoundException {
         String txId = LRAClient.getLRAId(lraId);
 
-        CompensatorStatus status = CompensatorStatus.Completed;
         String statusUrl = String.format("%s%s/completed", context.getBaseUri(), txId);
 
         System.out.printf("ActivityController completing %s, returning url:%s%n", txId, statusUrl);
@@ -151,10 +148,9 @@ public class HolaResource {
     @Path("/compensate")
     @Produces(MediaType.APPLICATION_JSON)
     @Compensate
-    public Response compensateWork(@HeaderParam(LRA_HTTP_HEADER) String lraId) throws NotFoundException {
+    public Response compensateWork(@HeaderParam(LRAClient.LRA_HTTP_HEADER) String lraId) throws NotFoundException {
         String txId = LRAClient.getLRAId(lraId);
 
-        CompensatorStatus status = CompensatorStatus.Compensated;
         String statusUrl = String.format("%s%s/compensated", context.getBaseUri(), txId);
 
         System.out.printf("ActivityController compensating %s, returning url:%s%n", txId, statusUrl);
@@ -166,13 +162,13 @@ public class HolaResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Status
     @LRA(LRA.Type.NOT_SUPPORTED)
-    public Response status(@HeaderParam(LRA_HTTP_HEADER) String lraId) throws NotFoundException {
+    public Response status(@HeaderParam(LRAClient.LRA_HTTP_HEADER) String lraId) throws NotFoundException {
         String txId = LRAClient.getLRAId(lraId);
         System.out.println("Call status for: '" + txId + "'");
         return Response.ok(CompensatorStatus.Completed).build();
     }
 
-    @PUT
+    /*@PUT
     @Path("/leave")
     @Produces(MediaType.APPLICATION_JSON)
     @Leave
@@ -180,7 +176,7 @@ public class HolaResource {
         String txId = LRAClient.getLRAId(lraId);
         System.out.println("Call leave for: '" + txId + "'");
         return Response.ok("non transactional").build();
-    }
+    }*/
 
     @GET
     @Path("/{TxId}/completed")
