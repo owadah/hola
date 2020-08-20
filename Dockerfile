@@ -1,5 +1,5 @@
-#FROM fabric8/java-jboss-openjdk8-jdk:1.2.3
-FROM fabric8/java-ubi-openjdk8-jdk:latest
+FROM fabric8/java-jboss-openjdk8-jdk:1.2.3
+#FROM fabric8/java-ubi-openjdk8-jdk:latest
 
 ENV JAVA_APP_JAR hola-swarm.jar
 ENV AB_ENABLED off
